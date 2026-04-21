@@ -11,6 +11,7 @@ See SPEC.md for the full goal statement.
 - User stories
 - Scope & non-goals (product v0.1)
 - Architecture
+- Security, privacy, and robustness
 - Implementation details
 - Tests plan
 - Team

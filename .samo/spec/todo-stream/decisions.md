@@ -78,3 +78,27 @@
 - accepted r4#13: Dependency policy updated to declare `@biomejs/biome` as a dev dep alongside `bun test` and type definitions, reconciling it with the CI lint step.
 - accepted r4#14: Root-path symlinks are now canonicalized exactly once at startup; the canonical path is used as `root` in the JSON, and a walker test pins this behavior.
 - accepted r4#15: Added a fixed 512-range ARG_MAX chunk size in the blamer with merge logic, plus a dedicated `blame_chunk.test.ts` that injects spawn and asserts multi-invocation behavior on >512-range inputs.
+
+## Round 5 — 2026-04-21T13:22:07.607Z
+
+- accepted A1: Added a Security section mandating NUL-delimited git modes (-z), argv-only path passing after --, UTF-8 handling rules, and a hostile-filenames fixture with \n/\t/leading-dash/quote/4-byte UTF-8 cases.
+- accepted A2: Added an Output-escaping subsection with explicit Markdown escape rules (backticks, pipes, brackets, HTML-comment openers), ANSI-escape stripping, and injection + ANSI golden probes in the renderer tests.
+- accepted A3: Added a Data-sensitivity subsection plus a --redact-emails flag (local-part → first char + ***) and README guidance; full-text/name redaction deferred.
+- accepted A4: Added --max-file-size (5 MiB default), --blame-timeout (30 s default), --blame-concurrency (8 default), explicit no-truncation-of-text trade-off, range validation, and tests for each.
+- accepted A5: Rewrote user story 1 to make the whole-repo-gating behavior explicit, documented the v0.1 workarounds (marker set reduction, --since baseline), and explicitly deferred diff/baseline mode.
+- accepted A6: Added a dedicated --staged section: git -C anchoring, worktree discovery via `git rev-parse --show-toplevel`, NUL-delimited enumeration, intersection with the resolved scan root, explicit submodule non-recursion, and new tests covering subdir + hostile-name staged files.
+- accepted A7: Added Output-atomicity rules: JSON renderer buffers full output before a single stdout.write; diagnostics go exclusively to stderr; partial-output behavior documented; test probe verifies stdout never contains partial JSON on failure.
+- accepted A8: Added Subprocess hardening: no shell, argv-only, GIT_OPTIONAL_LOCKS=0, GIT_TERMINAL_PROMPT=0, GIT_CONFIG_GLOBAL/SYSTEM=/dev/null, LC_ALL=C.UTF-8, hooksPath=/dev/null, PATH-resolved git, plus a malicious-config-repo fixture.
+- accepted A9: Removed Python triple-quoted-string handling from the language table; Python comments are # only in v0.1; added a negative fixture asserting markers in docstrings yield zero findings.
+- rejected A10: The postgres/postgres + database-lab clones, hosted schema, npm packaging, and macOS+Linux binaries are all load-bearing for the stated user stories (release engineer, staff engineer, OSS maintainer, pipeline consumer) and non-negotiable release obligations; shrinking them would undermine the spec's purpose.
+- accepted B1: Added an authoritative Config-file-schema subsection: enumerated keys, per-field types, validation mirror of CLI validation, wholesale-override merge semantics for list fields, unknown-key rejection (exit 2), and dedicated config.test.ts coverage.
+- accepted B2: Pinned the Markdown multi-line rendering: first segment on the bullet line, subsequent \n-separated segments as 2-space-indented continuation lines per CommonMark loose-list rules; blank segments render as blank indented lines; golden test enumerated.
+- accepted B3: Replaced the `grep -r` probe with a curated (marker, path-glob) allow-list pinned at each integration SHA, avoiding false positives from markers inside string literals on code-only lines.
+- accepted B4: Added step 4 to the continuation algorithm: when the marker-line text is empty after stripping, the leading \n is omitted; added a worked example and a dedicated extractor fixture.
+- accepted B5: Added Per-file-blame-spawn-failures subsection: non-zero exit or timeout for one file → all that file's findings get blame:null + a single stderr warning; run continues with exit 0/1 (not 2); blame_fail.test.ts covers this.
+- accepted B6: Added --max-file-size (default 5 MiB) to the CLI surface with range validation and a walker fixture that exceeds the cap; stderr warning + zero findings emitted.
+- accepted B7: Extension dispatch is now explicitly case-insensitive (lowercased before lookup); filename dispatch is also case-insensitive; extractor fixtures pin .TS and lowercase makefile behavior.
+- accepted B8: --staged now uses `git diff --cached --name-only -z` and the hostile-names fixture is routed through the staged path to prove correct NUL-delimited parsing for whitespace/non-ASCII filenames.
+- accepted B9: Added an exact-filename dispatch table (Makefile, Dockerfile, Jenkinsfile, CMakeLists.txt, .gitignore, .dockerignore) applied when extension lookup misses; extractor fixtures cover each.
+- accepted B10: Perf lane now runs three scans per job and fails only if all three exceed 90 s (best-of-3 smoothing), acknowledging hosted-runner variance; trend-tracking remains deferred.
+- accepted B11: Pinned the spawn seam as `runBlame(args): Promise<{stdout, exitCode}>` — the sole spawn caller in blame.ts — and made it the architectural boundary tests swap for ARG_MAX chunking, concurrency, timeout, env, and per-file-failure tests.
