@@ -1,8 +1,8 @@
 {
   "slug": "todo-stream",
   "phase": "draft",
-  "round_index": 0,
-  "version": "0.1.0",
+  "round_index": 1,
+  "version": "0.2.0",
   "persona": {
     "skill": "CLI software engineer",
     "accepted": true
@@ -15,7 +15,7 @@
   "round_state": "committed",
   "exit": null,
   "created_at": "2026-04-21T13:18:42.050Z",
-  "updated_at": "2026-04-21T13:18:42.050Z",
+  "updated_at": "2026-04-21T13:22:07.607Z",
   "input": {
     "idea": "CLI that walks a directory tree, greps TODO/FIXME/HACK comments from source files (configurable globs), enriches each finding with git blame (author + date + SHA), and emits a report as JSON or Markdown grouped by file. This is a LINTER for outstanding comments — NOT a todo-list app, NOT a CRUD storage tool. Bun+TypeScript, npm-distributed, no runtime deps beyond Bun built-ins. Tests: fixture unit tests for the extractor AND integration tests cloning postgres/postgres and postgres-ai/database-lab."
   }

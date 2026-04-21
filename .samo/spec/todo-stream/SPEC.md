@@ -1,4 +1,4 @@
-# todo-stream — SPEC v0.1
+# todo-stream — SPEC v0.2
 
 ## Goal & why it's needed
 
