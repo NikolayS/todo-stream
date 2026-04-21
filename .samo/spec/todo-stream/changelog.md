@@ -12,3 +12,7 @@
 ## v0.3 — 2026-04-21T13:22:07.607Z
 
 - Round 2 reviews applied (decisions — accepted: 12, rejected: 0, deferred: 0).
+## v0.4 — 2026-04-21T13:22:07.607Z
+
+- Round 3 reviews applied (decisions — accepted: 16, rejected: 1, deferred: 0).
+- reviewers retried this round (SPEC §7)

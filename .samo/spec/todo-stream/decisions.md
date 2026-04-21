@@ -40,3 +40,23 @@
 - accepted ambiguity#gitignore: Delegated `.gitignore` pruning to `git check-ignore --stdin` inside a worktree and declared it a no-op outside, eliminating the need to specify a custom parser subset.
 - accepted ambiguity#perf-hardware: Moved the runtime number out of correctness tests into a dedicated perf lane pinned to GitHub-hosted `ubuntu-latest` (4 vCPU, 16 GB RAM) with a loose 90 s ceiling for trend tracking.
 - accepted missing-requirement#changelog: Added v0.2 and v0.3 changelog entries summarizing the refinements made in each round.
+
+## Round 3 — 2026-04-21T13:22:07.607Z
+
+- accepted ambiguity#?: Replaced the asymmetric `\b` with a symmetric non-identifier class on both sides and restricted user markers to `^[A-Za-z0-9_]+$` (rejected at config-load with exit 2), eliminating the boundary ambiguity.
+- accepted ambiguity#?: Pinned `--since` to strict `YYYY-MM-DD`, interpreted as UTC midnight, with inclusive boundary; other forms (including `7d`) exit 2.
+- accepted ambiguity#?: Pinned `--staged` to file-set filter + working-tree read semantics and documented the limitation in the CLI surface and user story 4.
+- accepted weak-testing#?: Integration clones are now pinned to specific commit SHAs and count-sensitive assertions moved to the synthetic fixture repo; the real-repo invariants are now schema-validates + non-empty-sanity-floor only.
+- accepted ambiguity#?: Pinned `path` to POSIX-style and relative to `root`, with the single-file scan case specified (root becomes the parent dir).
+- accepted ambiguity#?: Fixed short SHA at 10 hex characters, independent of `core.abbrev`, and made the Markdown renderer use the same width for consistency.
+- accepted ambiguity#?: Pinned `--author` to case-insensitive substring matching against the `author <email>` concatenation, repeatable and OR'd.
+- accepted ambiguity#?: Pinned `--fail-on` to a comma list (non-repeatable) that must be a subset of `--markers`; a disjoint value is exit 2, not a silent no-op.
+- accepted ambiguity#?: Uncommitted `0000...` lines emit `blame: null` (not a synthesized object), keeping the blame shape uniform (full object or null).
+- accepted ambiguity#?: Declared symlinks skipped (not followed) in the walker, avoiding cycles and surprise out-of-root traversal.
+- accepted ambiguity#?: Pinned continuation-line joining: strip leading block-comment punctuation, concatenate with `\n`, preserve blank lines as a single `\n`.
+- accepted ambiguity#?: Stated markers are used verbatim (no upcasing) and match is case-sensitive; documented in the CLI surface so `--markers todo` matching only lowercase is explicit.
+- accepted ambiguity#?: Added an authoritative language table mapping extensions to comment syntax and exact `language` field values.
+- accepted ambiguity#?: Dropped env-var configuration from v0.1 scope and from the precedence list; precedence is now `CLI flags > todo-stream.config.json > defaults` only.
+- accepted ambiguity#?: Pinned `generated_at` format to ISO-8601 UTC with second precision and a trailing `Z` (`YYYY-MM-DDTHH:MM:SSZ`).
+- accepted weak-testing#?: Added an explicit black-box CLI test for the no-git-worktree degradation path (scan a fresh tmpdir with a FIXME file; assert top-level `blame: null` for every finding).
+- rejected weak-testing#?: Did not add automated baseline-regression gating; reframed the perf lane as a coarse 90 s ceiling / liveness gate with a human-inspected CSV artifact, and explicitly deferred trend comparison to a later version — the 'trend' framing was removed.
