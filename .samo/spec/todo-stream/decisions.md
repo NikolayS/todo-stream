@@ -102,3 +102,29 @@
 - accepted B9: Added an exact-filename dispatch table (Makefile, Dockerfile, Jenkinsfile, CMakeLists.txt, .gitignore, .dockerignore) applied when extension lookup misses; extractor fixtures cover each.
 - accepted B10: Perf lane now runs three scans per job and fails only if all three exceed 90 s (best-of-3 smoothing), acknowledging hosted-runner variance; trend-tracking remains deferred.
 - accepted B11: Pinned the spawn seam as `runBlame(args): Promise<{stdout, exitCode}>` — the sole spawn caller in blame.ts — and made it the architectural boundary tests swap for ARG_MAX chunking, concurrency, timeout, env, and per-file-failure tests.
+
+## Round 6 — 2026-04-21T13:22:07.607Z
+
+- accepted r6A-1: Added per-invocation -c flags neutralizing repo-local .git/config (fsmonitor, hooksPath, sshCommand, pager, diff.external, textconv, filter.*, url.*, alias.*, protocol.ext.allow) and GIT_CONFIG_NOSYSTEM=1; malicious-config fixture extended with a call-counter wrapper.
+- accepted r6A-2: Added PATH sanitization: empty/./../relative components dropped; components under the scan root rejected; git resolved once to an absolute path at startup; a dedicated git_path.test.ts synthesizes hostile PATH values.
+- accepted r6A-3: Unified output atomicity: both JSON and Markdown are fully buffered before a single stdout write; v0.6's streaming-Markdown allowance was removed to make the contract symmetric and testable.
+- accepted r6A-4: JSON renderer now strips ANSI/terminal-control sequences from every string field using the same authoritative grammar as Markdown; a --preserve-ansi opt-out is explicitly deferred.
+- accepted r6A-5: Byte decoding rewritten: source read via Bun.file().bytes(), extractor operates on bytes, CRLF normalized before continuation, UTF-8 decoded with U+FFFD replacement at render time; invalid-UTF-8 fixture added.
+- accepted r6A-6: Walker now unconditionally prunes .git/, .hg/, and .svn/ at every depth regardless of .gitignore state or --no-gitignore; a fixture with a .git/TODO-in-config pins the prune.
+- rejected r6A-7: Consistent with the v0.6 rationale for rejecting scope reduction: postgres/postgres + database-lab clones, hosted schema, npm packaging, macOS+Linux binaries, and perf lane are load-bearing for the stated user stories and release obligations.
+- accepted r6A-8: Added --max-findings (default 100 000) and --max-output-bytes (default 64 MiB) with exit-2 behavior and stderr diagnostics; both caps also addressable via the config file.
+- accepted r6B-1: --author now matches author and email as independent fields (OR), not a concatenation; a boundary-straddling regression fixture ('e <j' against 'Jane <jane@example.com>') pins zero matches.
+- accepted r6B-2: Added an authoritative ANSI grammar covering 7-bit CSI, 7-bit OSC (BEL and ST terminators), 7-bit single-char escapes, and 8-bit CSI/OSC; renderer tests now include OSC hyperlink, 8-bit CSI, and DEC private-mode probes.
+- accepted r6B-3: Generalized the spawn seam from runBlame to runGit so every git invocation (blame, check-ignore, both rev-parse forms, diff --cached) goes through the same boundary; hardened-env and -c-neutralization assertions run against all call sites.
+- accepted r6B-4: Line splitting recognizes LF and CRLF over bytes; the continuation algorithm's step 1 normalizes CRLF→LF; a CRLF-line-ending extractor fixture pins the rule.
+- accepted r6B-5: Walker now yields paths in lexicographic byte-order over POSIX-relative path; renderers emit findings sorted by (path, line, column); a determinism test compares byte-identical output across case-sensitive and case-preserving filesystems.
+- accepted r6B-6: When git is not resolvable at startup, .gitignore pruning is skipped, every finding gets blame: null, and --staged exits 2 with a readable error; a dedicated test sets PATH to contain no git binary.
+- accepted r6B-7: Added a dedicated black-box test combining real FIXMEs + --since 2099-01-01 + --fail-on FIXME → exit 0 AND empty findings, pinning the post-filter evaluation order.
+- accepted r6B-8: --redact-emails now replaces the entire local-part with *** uniformly (regardless of length), eliminating the single-character leak; renderer golden tests updated.
+- accepted r6B-9: A non-existent positional root exits 2 with a readable error; added to the CLI surface and the black-box test matrix.
+- accepted r6B-10: --staged with a single-file positional root anchors git -C at the file's parent directory (since git -C <file> is invalid); added to the CLI surface and a dedicated test case.
+- accepted r6B-11: Line 1 of shell and python files that begins with #! is skipped for marker extraction; a fixture pins that a TODO inside the shebang line is not reported, while a TODO on line 2 still is.
+- accepted r6B-12: Added a synthetic-repo commit authored at 2024-01-01T00:30:00+0900 (UTC 2023-12-31T15:30:00Z) with --since 2024-01-01 → dropped, pinning UTC-based author-date comparison.
+- accepted r6B-13: UTF-16 / UTF-32 source files contain NUL bytes and are skipped by the binary-file heuristic; documented as an accepted consequence in the Byte decoding subsection.
+- accepted r6B-14: Markdown atomicity now matches JSON (both fully buffered, single stdout write); the test matrix's output-atomicity probe runs against both formats, closing the rigor gap.
+- accepted r6B-15: The runGit seam documents its signature, test-swap contract, and absolute-git-path resolution; every git subcommand uses it uniformly, so per-subcommand failure modes and hardened-env guarantees are testable in isolation.

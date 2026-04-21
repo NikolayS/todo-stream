@@ -22,3 +22,6 @@
 ## v0.6 — 2026-04-21T13:22:07.607Z
 
 - Round 5 reviews applied (decisions — accepted: 20, rejected: 1, deferred: 0).
+## v0.7 — 2026-04-21T13:22:07.607Z
+
+- Round 6 reviews applied (decisions — accepted: 22, rejected: 1, deferred: 0).
