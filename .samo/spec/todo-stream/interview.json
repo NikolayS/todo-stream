@@ -1,0 +1,95 @@
+{
+  "slug": "todo-stream",
+  "persona": "Veteran \"CLI software engineer\" expert",
+  "generated_at": "2026-04-21T12:30:49.586Z",
+  "questions": [
+    {
+      "id": "storage-backend",
+      "text": "What storage backend should the CLI use for persisting todos?",
+      "options": [
+        "Plain-text file (Markdown/todo.txt)",
+        "Local JSON file",
+        "SQLite database",
+        "Remote API (sync server)",
+        "decide for me",
+        "not sure — defer",
+        "custom"
+      ]
+    },
+    {
+      "id": "streaming-model",
+      "text": "What does 'stream' mean in todo-stream — how are todos consumed and emitted?",
+      "options": [
+        "Append-only event log (add/complete/delete events)",
+        "Line-oriented stdin/stdout pipe (Unix filter style)",
+        "Tail-follow a file like `tail -f` with live updates",
+        "Pub/sub over a local socket for multiple subscribers",
+        "decide for me",
+        "not sure — defer",
+        "custom"
+      ]
+    },
+    {
+      "id": "core-commands",
+      "text": "Which command surface should v0.1 ship with?",
+      "options": [
+        "Minimal: add, list, done",
+        "Standard CRUD: add, list, done, edit, rm",
+        "CRUD + filters/tags/priorities",
+        "Single streaming command reading verbs from stdin",
+        "decide for me",
+        "not sure — defer",
+        "custom"
+      ]
+    },
+    {
+      "id": "implementation-language",
+      "text": "What language and distribution model should v0.1 target?",
+      "options": [
+        "Go (single static binary)",
+        "Rust (single static binary via cargo)",
+        "Python (pipx-installable)",
+        "Node/TypeScript (npm global)",
+        "POSIX shell script",
+        "decide for me",
+        "not sure — defer",
+        "custom"
+      ]
+    },
+    {
+      "id": "tui-scope",
+      "text": "What is the UX scope for v0.1 — purely pipeable CLI or interactive TUI?",
+      "options": [
+        "Pure CLI, machine-readable output (JSON/TSV) only",
+        "CLI with human-friendly formatted output + --json flag",
+        "CLI plus an interactive TUI (e.g., Bubble Tea/Ratatui) for live view",
+        "CLI + TUI + watch/daemon mode",
+        "decide for me",
+        "not sure — defer",
+        "custom"
+      ]
+    }
+  ],
+  "answers": [
+    {
+      "id": "storage-backend",
+      "choice": "Plain-text file (Markdown/todo.txt)"
+    },
+    {
+      "id": "streaming-model",
+      "choice": "Append-only event log (add/complete/delete events)"
+    },
+    {
+      "id": "core-commands",
+      "choice": "Minimal: add, list, done"
+    },
+    {
+      "id": "implementation-language",
+      "choice": "Go (single static binary)"
+    },
+    {
+      "id": "tui-scope",
+      "choice": "Pure CLI, machine-readable output (JSON/TSV) only"
+    }
+  ]
+}

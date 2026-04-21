@@ -1,0 +1,51 @@
+{
+  "phase": "draft",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 253,
+      "tokens": 64,
+      "blob": "0549017cf15c8d381b445b3339ddcd018aa8a1d2",
+      "included": true,
+      "risk_flags": []
+    },
+    {
+      "path": "package.json",
+      "bytes": 165,
+      "tokens": 42,
+      "blob": "be04b77ddd1fe3a381e84de83f918ac50f265c44",
+      "included": true,
+      "risk_flags": []
+    },
+    {
+      "path": ".samo/.gitignore",
+      "bytes": 69,
+      "tokens": 17,
+      "blob": "d9950aaaf117f8af431711029ca05e8e264a6edf",
+      "included": true,
+      "risk_flags": []
+    },
+    {
+      "path": ".samo/config.json",
+      "bytes": 1181,
+      "tokens": 296,
+      "blob": "76bd274e8954d39ab95992dbf92c4c2321f56737",
+      "included": true,
+      "risk_flags": []
+    },
+    {
+      "path": ".samo/spec/todo-stream/state.json",
+      "bytes": 424,
+      "tokens": 106,
+      "blob": "bfeb66edbabc8aa6b3c1835186550de5ea3a076f",
+      "included": true,
+      "risk_flags": []
+    }
+  ],
+  "risk_flags": [],
+  "budget": {
+    "phase": "draft",
+    "tokens_used": 525,
+    "tokens_budget": 30000
+  }
+}
