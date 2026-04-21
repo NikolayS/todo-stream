@@ -60,3 +60,21 @@
 - accepted ambiguity#?: Pinned `generated_at` format to ISO-8601 UTC with second precision and a trailing `Z` (`YYYY-MM-DDTHH:MM:SSZ`).
 - accepted weak-testing#?: Added an explicit black-box CLI test for the no-git-worktree degradation path (scan a fresh tmpdir with a FIXME file; assert top-level `blame: null` for every finding).
 - rejected weak-testing#?: Did not add automated baseline-regression gating; reframed the perf lane as a coarse 90 s ceiling / liveness gate with a human-inspected CSV artifact, and explicitly deferred trend comparison to a later version — the 'trend' framing was removed.
+
+## Round 4 — 2026-04-21T13:22:07.607Z
+
+- accepted r4#1: Resolved the per-line vs per-occurrence contradiction by pinning the rule to one Finding per marker occurrence, with a same-line two-marker case retained as a golden test alongside the block-comment-across-lines case.
+- accepted r4#2: Pinned blame.date to commit author-date (author-time+author-tz) consistently across the Scope, Components, JSON schema, Markdown output, --since comparison, and a new blame-parser test that distinguishes it from committer-time.
+- accepted r4#3: Rewrote the continuation-joining rule as an explicit three-step algorithm with a worked C-family example; removed `//` from the stripped-punctuation list and specified blank lines as empty segments so consecutive blanks produce consecutive `\n`s.
+- accepted r4#4: Removed auto-discovery from v0.1 scope: `--config <path>` is the only config-file entry point, and precedence now reads `CLI flags > --config file > defaults`.
+- accepted r4#5: Added positive and negative tests for `--include` and `--exclude`, their interaction with `--staged`, and an order-independence test proving exclude-wins regardless of argv order; wired into Sprint 1 red tests.
+- accepted r4#6: Strengthened real-repo integration invariants with full JSON-Schema validation and a per-default-marker presence probe; explicitly rejected count-tolerance gating and recorded the justification inline so future reviewers don't re-raise it.
+- accepted r4#7: Walker now explicitly deduplicates by resolved absolute path before extraction so overlapping --include globs cannot produce duplicate Findings.
+- accepted r4#8: Pinned --staged outside a git worktree to exit 2 with a usage error; staged-but-deleted-from-worktree files are silently skipped; both behaviors are tested.
+- accepted r4#9: Made --fail-on non-repeatable with exit 2 on repeat (rather than last-wins), and added a black-box test for the repeat case.
+- accepted r4#10: Documented the known-vs-unknown-extension asymmetry (string literals suppressed only for languages in the language table) as intentional in Scope and the Implementation details, with a paired fixture test in the extractor suite.
+- accepted r4#11: Replaced the misleading "top-level blame: null" wording with "per-finding blame: null" throughout the Architecture, Implementation details, and CLI surface.
+- accepted r4#12: Hardened the no-git-worktree test with a `GIT_CEILING_DIRECTORIES` guard and an explicit precondition check that fails fast if the test directory is inside an ambient worktree, preventing silent flakes on Nix/sandboxed CI runners.
+- accepted r4#13: Dependency policy updated to declare `@biomejs/biome` as a dev dep alongside `bun test` and type definitions, reconciling it with the CI lint step.
+- accepted r4#14: Root-path symlinks are now canonicalized exactly once at startup; the canonical path is used as `root` in the JSON, and a walker test pins this behavior.
+- accepted r4#15: Added a fixed 512-range ARG_MAX chunk size in the blamer with merge logic, plus a dedicated `blame_chunk.test.ts` that injects spawn and asserts multi-invocation behavior on >512-range inputs.

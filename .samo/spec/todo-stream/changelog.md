@@ -16,3 +16,6 @@
 
 - Round 3 reviews applied (decisions — accepted: 16, rejected: 1, deferred: 0).
 - reviewers retried this round (SPEC §7)
+## v0.5 — 2026-04-21T13:22:07.607Z
+
+- Round 4 reviews applied (decisions — accepted: 15, rejected: 0, deferred: 0).

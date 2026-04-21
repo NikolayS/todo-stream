@@ -1,0 +1,16 @@
+{
+  "round": 4,
+  "status": "partial",
+  "seats": {
+    "reviewer_a": {
+      "status": "schema_violation",
+      "error": {
+        "reason": "schema_violation",
+        "message": "Codex adapter other: exit 1: Reading prompt from stdin...\nOpenAI Codex v0.120.0 (research preview)\n--------\nworkdir: /private/tmp/todo-stream\nmodel: gpt-5.1-codex-max\nprovider: openai\napproval: never\nsandbox: read-only\nreasoning effort: high\nreasoning summaries: none\nsession id: 019db04a-06e5-7a80-bb53-8f0c58ee7f04\n--------\nuser\nYou are a paranoid security/ops engineer reviewing this spec. Focus especially on missing-risk, weak-implementation, and unnecessary-scope. You may surface findings in o"
+      }
+    },
+    "reviewer_b": "ok"
+  },
+  "started_at": "2026-04-21T13:22:07.607Z",
+  "completed_at": "2026-04-21T13:22:07.607Z"
+}
