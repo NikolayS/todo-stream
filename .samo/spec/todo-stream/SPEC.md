@@ -1,215 +1,217 @@
 # todo-stream — SPEC v0.1
 
-## 1. Goal & Why It's Needed
+## Goal & why it's needed
 
-**Goal:** Ship a single-binary CLI, `todo-stream`, that walks a directory tree, extracts `TODO` / `FIXME` / `HACK` (and user-configurable) comment markers from source files, enriches each finding with git blame metadata (author, commit date, SHA, line), and emits the findings as a machine-readable stream (JSON Lines by default, TSV, or Markdown).
+`todo-stream` is a CLI **linter for outstanding in-code comments** (TODO / FIXME / HACK / XXX). It walks a directory tree, extracts these markers from source files, enriches each finding with `git blame` metadata (author, commit date, SHA), and emits a grouped report as JSON or Markdown.
 
-**Why it's needed:** Engineering teams accumulate in-code debt markers that rot silently — nobody knows who wrote them, when, or why, and they never surface in code review or CI. Existing options are inadequate:
+**Why it's needed.** Every mature codebase accumulates `TODO`s that nobody owns. `grep -rn TODO` loses authorship and timing; GitHub's "Issues" tab loses the exact line of code. Existing tools (`leasot`, `notes`, IDE plugins) either don't run in CI, don't attach blame, or pull in heavy runtime dependencies. Engineering leads and release managers need a fast, dependency-light, pipeable report that answers: *which open TODOs does this repo carry, who wrote them, and how stale are they?* — suitable for CI gating, release-readiness dashboards, and tech-debt triage.
 
-- `grep -rn TODO` gives you hits but zero provenance (no author, no age, no aggregation).
-- IDE plugins (VS Code "TODO Tree", JetBrains) are per-developer, not CI-friendly, not scriptable, not portable.
-- Full linters (golangci-lint, eslint) have `godox`/`no-warning-comments` rules but they fail builds on *any* hit; teams disable them rather than triage.
-- Issue trackers (Jira, Linear) diverge from code reality — TODOs in code outlive their tracker entries.
+**Explicit non-goals (honored strictly).**
+- This is **NOT a todo-list application**. It does not create, edit, or complete tasks.
+- This is **NOT a CRUD storage tool**. It has no database, no persistent state, no server.
+- It does not mutate source files.
+- It does not replace an issue tracker; it *surfaces* comments so humans can decide whether to file issues.
 
-`todo-stream` fills the gap: a **linter-style, CI-friendly, provenance-enriched** view of in-code debt that is trivially pipeable into dashboards, Slack digests, PR comments, or issue-backfill scripts. It is **not** a todo-list app, **not** a CRUD store, **not** a task manager — it is a read-only reporter over source + git history.
+## User stories
 
-## 2. Scope
+1. **CI gatekeeper — Priya, release engineer.** Priya adds `todo-stream --format json --fail-on FIXME` to the repo's CI workflow so any PR that introduces a new `FIXME` fails the pipeline with a structured diagnostic pointing at file, line, author, and SHA.
+2. **Tech-debt triage — Luis, staff engineer.** Luis runs `todo-stream --format markdown --since 2024-01-01 > DEBT.md` against the monorepo once a quarter, grouping findings by file with blame dates, and uses the Markdown report in a planning meeting to assign owners.
+3. **Incoming maintainer — Dana, new OSS contributor.** Dana clones a large project (e.g. `postgres/postgres`) and runs `todo-stream src/backend --markers TODO,HACK --format markdown | less` to orient herself: she sees the oldest HACKs, who wrote them, and which files are hot-spots, without learning the project's in-house tooling.
+4. **Pre-commit author — Sam, individual developer.** Sam wires `todo-stream --staged --format json` into a `lefthook` pre-commit to print a compact summary of TODOs touched by the diff, so he notices accidental debt before pushing.
+5. **Pipeline consumer — automated dashboard.** A scheduled job runs `todo-stream --format json` and pipes the output into a downstream ingester that renders a historical chart of open TODO count per file — the JSON schema is stable and documented.
 
-### In scope (v0.1)
-- Recursive directory walk with include/exclude globs (defaults aligned with common source trees).
-- Comment-marker extraction for `TODO`, `FIXME`, `HACK` (configurable list, case-insensitive by default).
-- Per-finding git blame enrichment: author name, author email, commit SHA, commit ISO-8601 date, line number, original line text.
-- Output formats: **JSON Lines (default, streaming)**, **TSV**, **Markdown table/summary**.
-- Respect `.gitignore` automatically; honor an optional `.todo-stream-ignore` for finding-level suppression (a plain-text baseline file).
-- Exit codes suitable for CI: `0` no findings, `1` findings present, `2` tool error.
-- Single static Go binary distributed via GitHub Releases + Homebrew tap; an npm wrapper package republishes the same binary under `todo-stream` so npm-centric repos can `npx todo-stream`.
+## Scope & non-goals (v0.1)
 
-### Out of scope (v0.1)
-- Interactive TUI, watch mode, LSP server, web UI.
-- Writing to issue trackers (Jira/Linear/GitHub Issues) — punted to v0.2 as an optional sink.
-- Language-aware AST parsing — v0.1 uses lexical comment detection with per-language comment-syntax rules, not a full parser.
-- Cross-repo aggregation / daemon mode.
+**In scope**
+- Recursive walk of a directory with configurable include/exclude globs (defaults respect `.gitignore`).
+- Extraction of configurable markers (default: `TODO`, `FIXME`, `HACK`, `XXX`) from line and block comments in common languages (C, C++, Go, Rust, TS/JS, Python, Shell, SQL, Lua, Ruby — identified by file extension; everything else falls back to a generic regex).
+- Git blame enrichment per finding: author name, author email, commit date (ISO-8601), short SHA. Non-git trees degrade gracefully (blame fields `null`).
+- Two output formats: `json` (stable, documented schema) and `markdown` (human-readable, grouped by file).
+- Filters: `--markers`, `--since`, `--author`, `--path`, `--fail-on`.
+- Single static Bun-compiled binary + `npx todo-stream` entry point.
 
-### Reinterpretation of interview answers
-The interview elicited answers consistent with a "todo-list app," which conflicts with the stated Idea (a linter for in-code markers). The SPEC honors the Idea and re-maps the interview answers as follows, all of which the user can overturn in the next round:
-- `storage-backend: plain-text` → the `.todo-stream-ignore` baseline file (plain text), not a todo persistence store.
-- `streaming-model: append-only event log` → the JSON-Lines output stream, one finding per line, append-only in the sense that the tool never mutates source.
-- `core-commands: add / list / done` → re-mapped to `scan` (list), `baseline add` (accept a finding into baseline = "add to ignore"), `baseline prune` (drop entries whose underlying TODO is gone = "done").
-- `implementation-language: Go static binary` → **accepted as-is**, overriding the Bun hint in the Idea. Go gives a smaller, dependency-free binary, native git integration via `os/exec`, and trivial cross-compilation.
-- `tui-scope: pure CLI, JSON/TSV` → **accepted as-is**.
+**Out of scope for v0.1 (explicitly rejected or deferred)**
+- Any persistent storage (SQLite, JSON file, event log). `todo-stream` is stateless — each run re-scans.
+- Long-running daemon / watch mode / stdout NDJSON streaming transport.
+- Subcommands like `add` / `list` / `done` — this tool does not *manage* todos.
+- Multi-device sync, multi-user collaboration.
+- A todo data model with `id` / `done` / `created_at` fields — findings are *derived* from source, not stored records.
+- Rich parsers (tree-sitter, language servers). Regex over extension-keyed comment syntaxes is sufficient.
 
-## 3. User Stories
-
-1. **CI gate (persona: platform engineer Priya).** As a platform engineer wiring a new repo's CI, Priya runs `todo-stream --format jsonl --baseline .todo-stream-ignore` in a GitHub Action so that **any new TODO/FIXME added in a PR fails the build, while grandfathered ones stay green**, giving her a ratchet against debt growth without a big-bang cleanup.
-2. **Weekly debt digest (persona: tech lead Tomás).** As a tech lead of a 12-person team, Tomás cron-runs `todo-stream --format markdown --group-by author` against the main branch so that **every Monday he gets a Markdown table of open in-code TODOs grouped by author with commit age**, which he pastes into Slack to keep debt visible without nagging people individually.
-3. **Onboarding map (persona: new hire Nadia).** As a new hire joining a 200k-LOC codebase, Nadia runs `todo-stream --format jsonl | jq 'select(.marker == "HACK")'` to **surface known rough edges with their original author and date** so she can ask the right person the right question instead of silently stumbling into a minefield.
-4. **Issue backfill (persona: SRE Sam).** As an SRE preparing a quarterly cleanup sprint, Sam pipes `todo-stream --format jsonl --since 2023-01-01` into a script that opens GitHub issues for each finding older than a year, so **stale debt becomes trackable work** without manual hunting.
-
-## 4. Architecture
+## Architecture
 
 ```
- ┌────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
- │   config   │──▶│    walker    │──▶│   extractor  │──▶│   enricher   │──▶│   emitter    │
- │ (flags +   │   │ (fs traverse,│   │ (per-file    │   │ (git blame,  │   │ (jsonl/tsv/  │
- │ .ts-config)│   │  gitignore)  │   │  comment re) │   │  baseline)   │   │  markdown)   │
- └────────────┘   └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
-                        │                    │                  │                  │
-                        ▼                    ▼                  ▼                  ▼
-                   file paths          raw findings       enriched findings    stdout bytes
-                   (chan string)       (chan Finding)    (chan Finding)
+  ┌──────────────┐   paths   ┌──────────────┐  raw hits  ┌──────────────┐
+  │  CLI / args  │──────────▶│   Walker     │───────────▶│  Extractor   │
+  │  (flags.ts)  │           │ (walker.ts)  │            │ (extract.ts) │
+  └──────────────┘           └──────────────┘            └──────┬───────┘
+         ▲                                                      │ findings
+         │ exit code                                            ▼
+  ┌──────┴───────┐   report   ┌──────────────┐  enriched  ┌──────────────┐
+  │   Reporter   │◀───────────│   Renderer   │◀───────────│    Blamer    │
+  │ (main.ts)    │            │ json | md    │            │ (blame.ts)   │
+  └──────────────┘            └──────────────┘            └──────────────┘
 ```
 
-### Components (Go packages)
-- `cmd/todo-stream` — Cobra-based CLI entrypoint; parses flags, wires pipeline, handles exit codes.
-- `internal/config` — merges defaults, `.todo-stream.yml` if present, and flags. Pure, no I/O beyond reading the config file.
-- `internal/walker` — channel-producing directory walker that honors `.gitignore` via `go-git`'s matcher. Pluggable `FS` interface for test fakes.
-- `internal/extractor` — given a file path + language classification (by extension), scans for configured markers inside comments using a language-aware lexer table (not a full parser; recognizes `//`, `/* */`, `#`, `--`, `<!-- -->`, triple-quoted strings are **not** searched). Emits `RawFinding{path, line, col, marker, text}`.
-- `internal/enricher` — runs `git blame --porcelain -L n,n -- path` per finding (batched per file), parses porcelain output, attaches `{author, email, sha, date}`. Applies baseline filter.
-- `internal/baseline` — reads/writes `.todo-stream-ignore` (plain text, one `sha:relpath:line:marker` tuple per line, `#` comments allowed).
-- `internal/emitter` — three implementations behind an `Emitter` interface: `jsonl`, `tsv`, `markdown`.
-- `internal/gitexec` — thin wrapper around `os/exec` for `git` invocations; isolates this boundary for testing and for the "no git repo" fallback (enricher degrades gracefully: emits findings with null blame fields).
+**Components & boundaries**
+- **CLI (`src/cli.ts`)** — argument parsing (hand-rolled, no deps), config resolution (CLI flags > env > `todo-stream.config.json` > defaults), dispatch. Owns process exit code.
+- **Walker (`src/walker.ts`)** — streams matching file paths. Uses `Bun.Glob` for include/exclude; respects `.gitignore` via a small parser. Emits an async iterator of absolute paths; never buffers the whole tree.
+- **Extractor (`src/extract.ts`)** — pure function: `(path, bytes, config) → Finding[]`. Dispatches on extension to a comment-syntax table (`//`, `#`, `--`, `/* */`, `<!-- -->`, etc.). Returns `{path, line, column, marker, text, raw}` — no I/O, fully unit-testable from fixtures.
+- **Blamer (`src/blame.ts`)** — batches findings per file and shells out to `git blame --porcelain -L <line>,<line> -- <file>` (or `-L` ranges), parses porcelain output into `{author, email, date, sha}`. Caches by `(file, sha-of-HEAD)` within a run. Degrades to `null` fields outside a git repo.
+- **Renderer (`src/render/*.ts`)** — two pure renderers: `json.ts` (emits a versioned schema `{ $schema, tool, version, generated_at, findings: [...] }`) and `markdown.ts` (groups by file, sorts by line).
+- **Reporter (in `cli.ts`)** — writes to stdout, applies `--fail-on` rules, sets exit code.
 
-### Boundaries
-- **No network.** The tool never dials out.
-- **Git is optional.** If the target directory is not a git repo, enrichment fields are null and the tool still runs.
-- **Streaming by default.** Findings are emitted as they are produced; the tool does not buffer the full result set for `jsonl`/`tsv`. Markdown output buffers (requires sorting/grouping).
-- **Concurrency.** Walker → extractor → enricher form a bounded worker-pool pipeline (`GOMAXPROCS` workers for extraction, serialized git-blame batching per file to avoid git lock contention).
+**Key abstractions**
+- `Finding` — the one shared record shape crossing every boundary.
+- `CommentSyntax` — `{ line?: string[]; block?: [open, close][] }`, looked up by extension.
+- `Config` — frozen object assembled once at startup.
 
-### Key abstractions
-- `type Finding struct { Path string; Line int; Marker string; Text string; Blame *Blame }`
-- `type Blame struct { Author, Email, SHA string; Date time.Time }`
-- `type Emitter interface { Emit(Finding) error; Close() error }`
-- `type Baseline interface { Contains(Finding) bool; Entries() []Entry }`
+**Dependency policy.** Runtime deps = zero beyond Bun built-ins (`Bun.Glob`, `Bun.spawn`, `Bun.file`, `fs`, `path`). Dev deps limited to `bun test` and type definitions.
 
-## 5. Implementation Details
+## Implementation details
 
 ### Data flow
-1. `cmd` loads config → constructs pipeline.
-2. `walker` pushes file paths into `paths chan string` (capacity 256); respects `.gitignore` and `--include` / `--exclude` globs.
-3. N extractor workers read `paths`, open each file, scan line-by-line with a precompiled regex per language family (`(?i)\b(TODO|FIXME|HACK)\b[:(]?\s*(.*)`), produce `RawFinding`s into `raw chan RawFinding`.
-4. Enricher worker pool groups raw findings by path, invokes `git blame --porcelain -L a,b --incremental -- path` once per file covering the union of finding lines, zips blame info onto findings, applies baseline filter, emits to `out chan Finding`.
-5. Emitter drains `out` and writes to stdout. For `markdown`, it buffers into a slice, sorts by (author, date), groups per user flag, then writes.
-6. Exit code: `0` if `out` empty after baseline filter, `1` if any finding emitted, `2` if pipeline errored.
+1. `cli.ts` parses argv → `Config`.
+2. `walker.ts` yields file paths matching globs, pruning `.gitignore` and `--exclude`.
+3. For each path, `Bun.file(path).text()` → `extract.ts` → `Finding[]` (streamed, not accumulated repo-wide).
+4. Findings are grouped by file and handed to `blame.ts`, which issues one `git blame` per file with all needed line ranges.
+5. Enriched findings feed the chosen renderer; output is written to stdout.
+6. `--fail-on <marker>` sets exit code 1 if any matching finding exists; absence of findings exits 0. Internal errors exit 2.
 
-### Language/comment table (initial)
-| Language group | Extensions | Line comment | Block comment |
-|---|---|---|---|
-| C-family | .c .h .cc .cpp .hpp .go .rs .java .kt .swift .cs .js .jsx .ts .tsx .scala | `//` | `/* */` |
-| Shell-family | .sh .bash .zsh .py .rb .pl .toml .yml .yaml .tf .mk Makefile | `#` | — |
-| SQL-family | .sql | `--` | `/* */` |
-| Markup | .html .xml .vue .svelte .md | — | `<!-- -->` |
-| Lisp-family | .el .lisp .clj | `;` | — |
+### Finding extraction algorithm
+- For each line, strip to the comment region using the language's `CommentSyntax`.
+- Match `/(^|[^A-Za-z0-9_])(TODO|FIXME|HACK|XXX)\b[:\s-]?\s*(.*)/` (markers from config).
+- For block comments spanning multiple lines, continuation lines are attached to the marker on the opening line as a multi-line `text`.
+- Unknown extensions use a generic fallback: match markers only when preceded by a non-identifier character; record with `language: "unknown"`.
 
-Strings are **not** parsed; false positives inside string literals are accepted as a known v0.1 limitation (documented). A user can suppress specific findings via baseline.
+### Blame batching
+- Group findings by file; run `git blame --porcelain -L a,a -L b,b -- <file>` in a single invocation per file.
+- Parse porcelain headers once per unique commit; short-SHA = first 10 chars of commit id.
+- Outside a git worktree (detected via `git rev-parse --is-inside-work-tree`), skip blame entirely and emit `blame: null`.
 
-### Baseline file format (`.todo-stream-ignore`)
+### JSON schema (stable surface)
+```json
+{
+  "tool": "todo-stream",
+  "version": "0.1.0",
+  "generated_at": "2026-04-21T00:00:00Z",
+  "root": "/abs/path",
+  "findings": [
+    {
+      "path": "src/foo.ts",
+      "line": 42,
+      "column": 5,
+      "marker": "TODO",
+      "text": "rewrite with streaming parser",
+      "language": "typescript",
+      "blame": {
+        "author": "Jane Doe",
+        "email": "jane@example.com",
+        "date": "2024-07-11T14:03:22Z",
+        "sha": "a1b2c3d4e5"
+      }
+    }
+  ]
+}
 ```
-# auto-generated by: todo-stream baseline add
-abc1234:internal/foo/bar.go:42:TODO
-def5678:pkg/x/y.js:17:FIXME
+
+### Markdown output shape
+- `# TODO report — <root> — <generated_at>`
+- One `## <relative/path>` section per file, findings as list items: `- **TODO** L42 · Jane Doe, 2024-07-11 (a1b2c3d) — rewrite with streaming parser`.
+
+### CLI surface
 ```
-Match key is `(sha, relpath, line, marker)`. If the blame SHA changes, the baseline entry no longer matches — i.e., *modifying the line invalidates the grandfathering*, which is intentional: the ratchet should catch re-touched debt.
+todo-stream [path]              positional root (default: cwd)
+  --format json|markdown        default: markdown when TTY, json otherwise
+  --markers TODO,FIXME,HACK     default: TODO,FIXME,HACK,XXX
+  --include "**/*.ts"           repeatable
+  --exclude "**/dist/**"        repeatable
+  --since 2024-01-01            drop findings whose blame date is older
+  --author <substr>             filter by blame author
+  --fail-on TODO|FIXME|...      exit 1 if any finding matches
+  --no-gitignore                disable .gitignore pruning
+  --no-blame                    skip git blame enrichment
+  --staged                      limit to files in `git diff --cached --name-only`
+  --config <path>               load JSON config
+  --version | --help
+```
 
-### State transitions for baseline CLI
-- `todo-stream baseline add` — runs a scan, appends every current finding to `.todo-stream-ignore` (dedupe, sort).
-- `todo-stream baseline prune` — runs a scan, drops baseline entries that no longer match any finding (the "done" case).
-- `todo-stream baseline list` — prints baseline entries enriched with blame (for review).
+## Tests plan
 
-### Performance targets
-- 100k LOC repo, warm FS cache: scan completes in < 3 s on an M2 laptop.
-- Memory: O(findings) not O(LOC); streaming emitters hold ≤ 1 MB resident for jsonl.
-- Integration test target: `postgres/postgres` (~2.5M LOC) completes in < 60 s with blame disabled and < 5 min with blame enabled (on CI).
+### Unit tests (fixture-driven, TDD — RED first)
+Built **test-first** (red → green):
+- **Extractor (`extract.test.ts`)** — a `tests/fixtures/` tree with one small file per supported language containing known markers in line comments, block comments, nested blocks, strings-that-look-like-comments (negative case), and the generic fallback. Each assertion pins exact `(line, column, marker, text)`. **Write the failing tests first**, then implement `extract.ts` until green.
+- **Walker (`walker.test.ts`)** — fixture tree with `.gitignore`, nested ignores, symlinks, and binary files. Assert the yielded path set. Red-first.
+- **Renderers (`render.test.ts`)** — golden-file tests: feed a known `Finding[]` → assert byte-exact JSON and stable Markdown. Red-first.
+- **Blame parser (`blame.test.ts`)** — feed canned `git blame --porcelain` output (captured, checked in) → assert parsed records. Red-first; no real git invocation here.
 
-## 6. Tests Plan
+### Integration tests (real git, CI)
+Built after the unit suite is green (test-second, since they depend on the full pipeline):
+- **`postgres/postgres`** — shallow clone in CI (`git clone --depth=1`), run `todo-stream --format json` against a bounded subtree (e.g. `src/backend/access/`), assert: exits 0, JSON validates against the schema, `findings.length > 0`, every finding has non-null blame fields, runtime < 60 s on CI hardware.
+- **`postgres-ai/database-lab`** — shallow clone, full-repo scan, same invariants, plus spot-check: at least one known long-standing `TODO` is present (pin by file path + marker, not by exact text which may rot).
+- Both integration tests are gated behind `INTEGRATION=1` env so local `bun test` stays fast; CI sets it.
 
-### TDD (red/green) — built test-first
-- **Extractor** (`internal/extractor`): exhaustive table tests over (language × marker × comment-syntax × edge cases: URL fragments, trailing punctuation, marker inside string literal documented as false positive). **Test-first, red-green-refactor.**
-- **Baseline matcher** (`internal/baseline`): tuple match/mismatch, malformed lines, comment lines. **Test-first.**
-- **Emitters** (`internal/emitter`): golden-file tests for jsonl, tsv, markdown over a fixed finding set. **Test-first.**
-- **Config merge** (`internal/config`): flag > file > default precedence. **Test-first.**
+### CI matrix
+- `bun test` (unit) on every PR — must pass.
+- `INTEGRATION=1 bun test` nightly and on `main` — must pass.
+- `bun build --compile` smoke: compile, run `--help`, run against the repo itself.
+- Typecheck: `bun tsc --noEmit`.
+- Lint: `biome check` (dev-only).
 
-### Built test-after (behaviour-first, tests pin the shape)
-- `internal/walker` — exercised via integration tests against real fixture trees; unit tests only for the gitignore matcher boundary.
-- `internal/enricher` — integration tests against a small ephemeral git repo created in `t.TempDir()`; unit tests for porcelain parser only.
-- `cmd/todo-stream` — end-to-end tests shelling out to the built binary.
+### TDD call-out (explicit)
+- **Test-first (RED → GREEN):** extractor, walker, renderers, blame-porcelain parser. These are pure and fixture-driven — write failing tests before any implementation line.
+- **Test-after:** CLI argument wiring, integration tests against real repos, the compile/smoke step. These exercise glue and external systems where test-first yields diminishing returns.
 
-### CI test matrix
-1. **Unit tests** (`go test ./...`) on Linux, macOS, Windows, Go 1.22 and latest.
-2. **Fixture integration** — a committed `testdata/fixtures/` tree with known findings; assert exact JSONL output.
-3. **Ephemeral-repo integration** — create a repo in `t.TempDir()`, commit files with TODOs under distinct authors/dates, run binary, assert blame fields.
-4. **External-repo smoke (nightly only, not PR-blocking)** — shallow-clone `postgres/postgres` and `postgres-ai/database-lab` into a CI cache, run `todo-stream`, assert non-zero finding count and < 5 min runtime. Lives in a separate nightly workflow so PR CI stays under 3 min.
-5. **Lint** — `golangci-lint run`.
-6. **Race** — `go test -race ./...`.
-7. **Release dry-run** — GoReleaser `--snapshot` on tag PRs.
+## Team
 
-### Coverage target
-- `internal/extractor`, `internal/baseline`, `internal/emitter`, `internal/config`: ≥ 90 % line coverage (these are the pure-logic cores).
-- Overall repo: ≥ 75 %.
+Veteran experts to hire:
+- **Veteran CLI systems engineer (1)** — owns walker, CLI surface, Bun packaging, exit-code semantics.
+- **Veteran parser/regex engineer (1)** — owns the extractor, comment-syntax table, and edge-case handling (strings-as-comments, nested blocks).
+- **Veteran git-plumbing engineer (1)** — owns the blamer: porcelain parsing, batching, graceful degradation, and worktree detection.
+- **Veteran test engineer (1)** — owns fixture design, golden files, and the postgres/postgres + database-lab integration harness in CI.
+- **Veteran TypeScript/Bun release engineer (1, part-time)** — owns `package.json`, `bin` entry, `bun build --compile`, npm publish workflow, semver discipline.
 
-## 7. Team
+Total: 4 full-time + 1 part-time.
 
-Veteran experts to hire for the build:
-- **Veteran Go CLI systems engineer (1)** — primary owner; Cobra, channels, goroutines, cross-compilation, GoReleaser.
-- **Veteran Git internals engineer (1)** — owns the `enricher` + `gitexec` boundary; deep `git blame --porcelain` experience, handles submodule/worktree edge cases.
-- **Veteran language-tooling / lexer engineer (1)** — owns the extractor's per-language comment rules; prior work on linters or syntax highlighters.
-- **Veteran CI/release engineer (0.5)** — GitHub Actions, Homebrew tap, npm binary-wrapper package, GoReleaser config, SBOM/signing.
-- **Veteran QA / integration-test engineer (0.5)** — fixture design, ephemeral-repo test harness, nightly external-repo smoke workflow.
+## Implementation plan
 
-Total: 4.0 FTE-weeks worth of specialists for the v0.1 cut.
+Sprints are one week each. `⇄` = work happens in parallel; `→` = ordering dependency.
 
-## 8. Implementation Plan
+### Sprint 1 — Skeleton & red tests
+- CLI engineer: scaffold repo layout, `bin/todo-stream`, `--help`, `--version`, argv parser. ⇄
+- Parser engineer: author fixture tree under `tests/fixtures/langs/` and write **failing** extractor tests for TS/JS, Go, Python, C/C++, SQL, Shell. ⇄
+- Git engineer: capture canned `git blame --porcelain` outputs into `tests/fixtures/blame/` and write **failing** parser tests. ⇄
+- Test engineer: stand up `bun test` in CI, add the `INTEGRATION=1` gate (no integration tests yet). ⇄
+- Release engineer: lock Bun version, add `bun tsc --noEmit` + `biome check` to CI.
+- **Gate:** all tests RED, CI green on lint/type.
 
-Three short sprints. Parallel tracks are labeled `[A]`, `[B]`, `[C]`, `[D]`, `[E]` corresponding to the five hires above.
+### Sprint 2 — Core green
+- Parser engineer → implement `extract.ts` until fixtures pass. (depends on Sprint 1 fixtures)
+- CLI engineer → implement `walker.ts` with `Bun.Glob` + `.gitignore`, write walker tests RED→GREEN in this sprint. ⇄
+- Git engineer → implement blame porcelain parser (pure) until its unit tests pass. ⇄
+- Test engineer → author golden-file tests for both renderers (still red; renderers not yet built).
+- **Gate:** extractor, walker, blame parser all GREEN; renderer tests still RED.
 
-### Sprint 1 — Skeleton + pure cores (week 1)
-Goal: a binary that compiles and runs against a fixture, emitting findings *without* blame.
-- `[A]` Scaffold repo layout, Cobra CLI, `scan` subcommand, exit-code wiring, Makefile, CI boot.
-- `[C]` **TDD**: build `internal/extractor` against fixture files; finalize language/comment table; golden tests green.
-- `[A]` **TDD**: build `internal/emitter` (jsonl/tsv/markdown) against a fixed `[]Finding` slice; golden tests green.
-- `[A]` **TDD**: build `internal/config` merge logic; golden tests green.
-- `[D]` GitHub Actions workflow: unit + race + lint on Linux/macOS/Windows.
-- **Dependency:** `[A]` config scaffold must land by day 2 so `[C]` can import config types; otherwise `[C]` stubs them.
-- **Parallelizable:** `[A]` emitter, `[A]` config, `[C]` extractor can run concurrently after day 2.
+### Sprint 3 — Render & wire
+- CLI engineer → implement JSON + Markdown renderers against golden tests; wire end-to-end pipeline in `cli.ts`. (depends on Sprint 2)
+- Git engineer → implement `blame.ts` runtime (spawn `git blame`, batch per file, cache, no-git fallback). ⇄
+- Parser engineer → extend markers config + `--markers` flag, add generic fallback extraction. ⇄
+- Test engineer → start integration harness: shallow-clone helper, postgres subtree scan (still failing E2E, since `blame.ts` may be mid-flight).
+- **Gate:** renderer tests GREEN; `todo-stream` runs end-to-end against the repo itself and produces valid output.
 
-**Exit criterion:** `todo-stream scan ./testdata/fixtures` emits correct JSONL with null blame; CI green.
+### Sprint 4 — Integration & release
+- Test engineer → finalize integration tests (postgres/postgres + postgres-ai/database-lab), tune CI runtime. (depends on Sprint 3)
+- Release engineer → `bun build --compile` pipeline, npm publish dry-run, `npx todo-stream` smoke, README usage + JSON schema docs. ⇄
+- CLI engineer → implement `--since`, `--author`, `--fail-on`, `--staged`, `--config`. ⇄
+- Git engineer → hardening: large-file guard, symlink handling in blame, performance pass (target: scan postgres/postgres in < 60 s). ⇄
+- Parser engineer → extend language coverage (Rust, Ruby, Lua) with fresh red→green fixtures.
+- **Gate:** integration tests GREEN on CI; `bun run build` emits a working static binary; v0.1.0 tagged.
 
-### Sprint 2 — Enrichment + baseline (week 2)
-Goal: full v0.1 behaviour.
-- `[B]` **TDD** on `internal/gitexec` porcelain parser; then integration-tested `internal/enricher` against ephemeral repos.
-- `[A]` Wire the walker → extractor → enricher → emitter pipeline with bounded worker pools; add `--include`/`--exclude`/`.gitignore` support.
-- `[A]` **TDD**: `internal/baseline` matcher and file format; `baseline add|prune|list` subcommands.
-- `[E]` Fixture tree + ephemeral-repo integration tests. Author/date assertions.
-- **Dependency:** `[B]` enricher depends on `[A]` pipeline scaffold from Sprint 1; `[A]` baseline can land in parallel with `[B]` enricher (independent packages).
-- **Parallelizable:** `[B]` enricher, `[A]` baseline, `[E]` integration tests all run concurrently after Sprint 1 exit.
+### Parallelization summary
+- Sprint 1 is almost fully parallel (four independent red-test authoring streams).
+- Sprint 2 and 3 pair the parser+git engineers in parallel while the CLI engineer advances the pipeline; the test engineer stays one step ahead writing the next red tests.
+- Sprint 4 fans out: every engineer has an independent lane.
 
-**Exit criterion:** all v0.1 user stories executable end-to-end against `testdata/fixtures`; ephemeral-repo integration tests green.
+## Embedded Changelog
 
-### Sprint 3 — Release hardening (week 3)
-Goal: shippable binary on GitHub Releases + Homebrew + npm wrapper.
-- `[D]` GoReleaser config (darwin/linux/windows × amd64/arm64), signed checksums, Homebrew tap, npm binary-wrapper package.
-- `[E]` Nightly workflow: clone `postgres/postgres` + `postgres-ai/database-lab`, run binary, assert runtime/finding-count budgets.
-- `[A]` Performance pass: pprof, reduce allocations in extractor hot path, document numbers in README.
-- `[A]`+`[C]` Docs: README usage, `.todo-stream.yml` example, CI recipe snippet (the Sprint-1 platform-engineer story).
-- **Dependency:** release work `[D]` depends on a stable CLI surface from Sprint 2 (flag freeze at Sprint-2 exit).
-- **Parallelizable:** `[D]` release, `[E]` nightly smoke, `[A]`/`[C]` docs all run concurrently.
-
-**Exit criterion:** `brew install todo-stream` and `npx todo-stream` both work; nightly smoke green two nights in a row; SPEC v0.1 tagged `v0.1.0`.
-
-## 9. Non-goals / Deferred
-
-- Interactive TUI, watch mode, LSP — deferred to v0.3+.
-- Issue-tracker sinks (GitHub/Jira/Linear) — deferred to v0.2.
-- AST-level parsing to eliminate string-literal false positives — deferred; baseline suppression is the v0.1 escape hatch.
-- SARIF output for code-scanning dashboards — deferred to v0.2.
-- Age-based severity (`--fail-older-than 180d`) — deferred to v0.2.
-
-## 10. Risks & Mitigations
-
-- **Git blame cost on huge repos.** Mitigation: batch blame per file, `--no-blame` flag, document perf budget, exercise in nightly smoke.
-- **False positives in string literals.** Mitigation: baseline file; document limitation; revisit with AST in v0.2.
-- **Windows path / line-ending quirks.** Mitigation: CI matrix includes Windows from day one; path handling via `filepath.ToSlash` at boundaries.
-- **Interview/Idea conflict (see §2).** Mitigation: explicit reinterpretation documented above; user can reject in the next review round and the SPEC pivots.
-
-## 11. Embedded Changelog
-
-- v0.1 (2026-04-21) — initial draft scaffold; reconciled Idea (TODO-comment linter) with interview answers (Go single binary, pure CLI, JSON/TSV), re-mapping `add/list/done` onto `scan` + `baseline add|prune|list`; committed to Go + Cobra + GoReleaser; defined three-sprint plan with five specialist roles.
+- **v0.1 (2026-04-21)** — Initial spec draft. Reframed away from the "todo-list app" interview answers (SQLite, NDJSON daemon, add/list/done subcommands, id/done/created_at model) per the authoritative idea: this is a **linter for TODO/FIXME/HACK comments**, not a storage tool. Locked scope to directory walk + regex extract + git blame + JSON/Markdown report. Zero runtime deps beyond Bun built-ins. Tests: fixture-driven unit suite (TDD red-first) plus CI integration tests cloning `postgres/postgres` and `postgres-ai/database-lab`.

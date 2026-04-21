@@ -18,6 +18,14 @@
       "risk_flags": []
     },
     {
+      "path": ".samo/spec/todo-stream/state.json",
+      "bytes": 961,
+      "tokens": 240,
+      "blob": "16e701234479c23fc60b22a79c850d1fa6ceb6cf",
+      "included": true,
+      "risk_flags": []
+    },
+    {
       "path": ".samo/.gitignore",
       "bytes": 69,
       "tokens": 17,
@@ -32,20 +40,12 @@
       "blob": "76bd274e8954d39ab95992dbf92c4c2321f56737",
       "included": true,
       "risk_flags": []
-    },
-    {
-      "path": ".samo/spec/todo-stream/state.json",
-      "bytes": 424,
-      "tokens": 106,
-      "blob": "bfeb66edbabc8aa6b3c1835186550de5ea3a076f",
-      "included": true,
-      "risk_flags": []
     }
   ],
   "risk_flags": [],
   "budget": {
     "phase": "draft",
-    "tokens_used": 525,
+    "tokens_used": 659,
     "tokens_budget": 30000
   }
 }

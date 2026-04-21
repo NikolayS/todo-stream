@@ -1,69 +1,75 @@
 {
   "slug": "todo-stream",
   "persona": "Veteran \"CLI software engineer\" expert",
-  "generated_at": "2026-04-21T12:30:49.586Z",
+  "generated_at": "2026-04-21T13:18:42.050Z",
   "questions": [
     {
       "id": "storage-backend",
-      "text": "What storage backend should the CLI use for persisting todos?",
+      "text": "What persistence layer should todo-stream use for todos and the append-only event log?",
       "options": [
-        "Plain-text file (Markdown/todo.txt)",
-        "Local JSON file",
-        "SQLite database",
-        "Remote API (sync server)",
+        "Single SQLite file with WAL mode",
+        "Plain JSONL append-only file plus in-memory index",
+        "Embedded key-value store (e.g. BoltDB/LMDB)",
+        "Pluggable backend with SQLite default",
+        "Postgres via libpq for multi-user setups",
         "decide for me",
         "not sure — defer",
         "custom"
       ]
     },
     {
-      "id": "streaming-model",
-      "text": "What does 'stream' mean in todo-stream — how are todos consumed and emitted?",
+      "id": "stream-transport",
+      "text": "How should the 'stream' side expose real-time updates to clients and other processes?",
       "options": [
-        "Append-only event log (add/complete/delete events)",
-        "Line-oriented stdin/stdout pipe (Unix filter style)",
-        "Tail-follow a file like `tail -f` with live updates",
-        "Pub/sub over a local socket for multiple subscribers",
+        "stdout NDJSON lines for pipe-friendly consumption",
+        "Unix domain socket with line-delimited JSON",
+        "Local HTTP server with Server-Sent Events",
+        "Local WebSocket server",
+        "gRPC server with streaming RPC",
+        "tail -f style file watch on the event log",
         "decide for me",
         "not sure — defer",
         "custom"
       ]
     },
     {
-      "id": "core-commands",
-      "text": "Which command surface should v0.1 ship with?",
+      "id": "invocation-model",
+      "text": "What is the primary CLI invocation model users should expect?",
       "options": [
-        "Minimal: add, list, done",
-        "Standard CRUD: add, list, done, edit, rm",
-        "CRUD + filters/tags/priorities",
-        "Single streaming command reading verbs from stdin",
+        "One-shot subcommands (add/list/done) that exit immediately",
+        "Long-running daemon plus thin client subcommands",
+        "Interactive TUI as the default entry point",
+        "REPL shell with subcommands inside",
+        "Hybrid: one-shot commands plus optional 'stream' follow mode",
         "decide for me",
         "not sure — defer",
         "custom"
       ]
     },
     {
-      "id": "implementation-language",
-      "text": "What language and distribution model should v0.1 target?",
+      "id": "sync-scope",
+      "text": "What is the v0.1 scope for multi-device or multi-user synchronization?",
       "options": [
-        "Go (single static binary)",
-        "Rust (single static binary via cargo)",
-        "Python (pipx-installable)",
-        "Node/TypeScript (npm global)",
-        "POSIX shell script",
+        "Local single-user only, no sync",
+        "Git-backed sync of the event log",
+        "Optional self-hosted relay server over HTTP",
+        "CRDT-based peer-to-peer sync",
+        "Export/import commands only, manual sync",
         "decide for me",
         "not sure — defer",
         "custom"
       ]
     },
     {
-      "id": "tui-scope",
-      "text": "What is the UX scope for v0.1 — purely pipeable CLI or interactive TUI?",
+      "id": "todo-data-model",
+      "text": "What fields and semantics define a todo in the v0.1 data model?",
       "options": [
-        "Pure CLI, machine-readable output (JSON/TSV) only",
-        "CLI with human-friendly formatted output + --json flag",
-        "CLI plus an interactive TUI (e.g., Bubble Tea/Ratatui) for live view",
-        "CLI + TUI + watch/daemon mode",
+        "Minimal: id, text, done, created_at",
+        "Add tags and priority",
+        "Add due date and project/list grouping",
+        "Add parent_id for subtasks and dependencies",
+        "Taskwarrior-compatible schema",
+        "Full GTD: contexts, projects, energy, next-action flag",
         "decide for me",
         "not sure — defer",
         "custom"
@@ -73,23 +79,23 @@
   "answers": [
     {
       "id": "storage-backend",
-      "choice": "Plain-text file (Markdown/todo.txt)"
+      "choice": "Single SQLite file with WAL mode"
     },
     {
-      "id": "streaming-model",
-      "choice": "Append-only event log (add/complete/delete events)"
+      "id": "stream-transport",
+      "choice": "stdout NDJSON lines for pipe-friendly consumption"
     },
     {
-      "id": "core-commands",
-      "choice": "Minimal: add, list, done"
+      "id": "invocation-model",
+      "choice": "One-shot subcommands (add/list/done) that exit immediately"
     },
     {
-      "id": "implementation-language",
-      "choice": "Go (single static binary)"
+      "id": "sync-scope",
+      "choice": "Local single-user only, no sync"
     },
     {
-      "id": "tui-scope",
-      "choice": "Pure CLI, machine-readable output (JSON/TSV) only"
+      "id": "todo-data-model",
+      "choice": "Minimal: id, text, done, created_at"
     }
   ]
 }
