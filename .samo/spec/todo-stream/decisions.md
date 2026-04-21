@@ -25,3 +25,18 @@
 - deferred ambiguity#?: Windows support posture for v0.1 belongs to the locked Scope and Implementation details; will declare supported platforms explicitly next round.
 - deferred ambiguity#?: Nullable shape of `blame` (object-null vs per-field-null) belongs to the locked JSON schema; will pin to `blame: null` wholesale next round.
 - deferred weak-testing#?: Enumerating renderer golden-fixture edge cases (empty, null-blame, multi-line, non-ASCII, long text, duplicates) belongs to the locked Tests plan; will enumerate next round.
+
+## Round 2 — 2026-04-21T13:22:07.607Z
+
+- accepted contradiction#version: Added an explicit 'Versioning convention' section separating spec version (v0.3) from product version (0.1.0), bumped the header, and filled in v0.2 and v0.3 changelog entries.
+- accepted contradiction#json-schema: Reconciled the JSON renderer prose and example: both now include `$schema` and `root`, and the example is declared the canonical stable surface.
+- accepted contradiction#marker-regex: Finding extraction algorithm now states the regex is built dynamically from `config.markers` with per-marker escaping, making `--markers` functional by construction.
+- accepted ambiguity#staged: Pinned `--staged` to file-level semantics (files listed by `git diff --cached --name-only`) and rewrote user story 4 to match the CLI surface.
+- accepted ambiguity#since-author-blame: Added an explicit precedence block: `--no-blame` combined with `--since`/`--author` is a usage error (exit 2); when blame is enabled but null, those findings are dropped by blame-dependent filters.
+- accepted weak-testing#pinned-todo: Replaced the brittle 'pinned long-standing TODO' assertion with structural invariants against the real repo plus a dedicated synthetic bare-git fixture that pins (path, line, marker, text, sha) deterministically.
+- accepted weak-testing#cli-flags: Added a black-box CLI test section covering every v0.1 flag with positive and negative cases and all three exit codes (0/1/2), and made those tests red-first in Sprint 1.
+- accepted weak-testing#strings: Declared string-literal tokenization an explicit non-goal and added a fixture assertion that `const s = "TODO"` on a code-only line yields zero findings.
+- accepted ambiguity#block-multi-marker: Extraction algorithm now specifies that each marker line within a block comment yields its own Finding, with non-marker continuation lines attached to the preceding marker.
+- accepted ambiguity#gitignore: Delegated `.gitignore` pruning to `git check-ignore --stdin` inside a worktree and declared it a no-op outside, eliminating the need to specify a custom parser subset.
+- accepted ambiguity#perf-hardware: Moved the runtime number out of correctness tests into a dedicated perf lane pinned to GitHub-hosted `ubuntu-latest` (4 vCPU, 16 GB RAM) with a loose 90 s ceiling for trend tracking.
+- accepted missing-requirement#changelog: Added v0.2 and v0.3 changelog entries summarizing the refinements made in each round.

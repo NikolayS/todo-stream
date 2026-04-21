@@ -7,8 +7,9 @@ See SPEC.md for the full goal statement.
 ## Scope summary
 
 - Goal & why it's needed
+- Versioning convention
 - User stories
-- Scope & non-goals (v0.1)
+- Scope & non-goals (product v0.1)
 - Architecture
 - Implementation details
 - Tests plan
